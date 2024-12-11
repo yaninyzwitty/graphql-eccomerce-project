@@ -40,5 +40,5 @@ help:
 	@echo "  make reset_migrations   - Reset all migrations"
 
 # goose -dir ./internal/database/migrations postgres "postgres://myUser:mysecret_password@localhost:5432/myDatabase" up
-# goose -dir ./internal/database/migrations create add-some-table sql
+# goose -dir ./internal/database/migrations create add-some-table sq
 
