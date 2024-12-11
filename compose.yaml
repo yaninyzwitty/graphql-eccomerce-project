@@ -5,6 +5,7 @@ services:
       - "8080:8080"
     environment:
       - USERNAME
+      - DB_PASSWORD
     env_file:
       - ./dev.env
     networks:
@@ -15,7 +16,7 @@ services:
       - 5432:5432
     environment:
       - POSTGRES_USER=myUser
-      - POSTGRES_DB=myDB
+      - POSTGRES_DB=myDatabase
       - POSTGRES_PASSWORD_FILE=/run/secrets/pg_password
     secrets:
       - pg_password
