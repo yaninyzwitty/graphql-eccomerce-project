@@ -1,28 +1,96 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
+# GraphQL Schema
 
-type Todo {
-  id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
-}
-
-type User {
+# Customer Type
+type Customer {
   id: ID!
   name: String!
+  email: String!
+  created_at: String!
+  orders: [Order!]! # A customer can have multiple orders
 }
+
+# Product Type
+type Product {
+  id: ID!
+  name: String!
+  price: Float!
+  created_at: String!
+  order_items: [OrderItem!]! # A product can be part of many order items
+}
+
+# Order Type
+type Order {
+  id: ID!
+  customer: Customer! # Reference to the customer who placed the order
+  created_at: String!
+  items: [OrderItem!]! # The items in this order
+}
+
+# OrderItem Type
+type OrderItem {
+  id: ID!
+  order: Order! # Reference to the order this item belongs to
+  product: Product! # Reference to the product ordered
+  quantity: Int!
+  price: Float!
+  created_at: String!
+}
+
+# Queries to fetch data
 
 type Query {
-  todos: [Todo!]!
+  # Get all customers
+  customers: [Customer!]!
+
+  # Get a single customer by ID
+  customer(id: ID!): Customer
+
+  # Get all products
+  products: [Product!]!
+
+  # Get a single product by ID
+  product(id: ID!): Product
+
+  # Get all orders for a customer
+  ordersByCustomer(customerId: ID!): [Order!]!
+
+  # Get all order items in an order
+  orderItemsByOrder(orderId: ID!): [OrderItem!]!
 }
 
-input NewTodo {
-  text: String!
-  userId: String!
+# Mutations for creating or modifying data
+
+input NewCustomerInput {
+  name: String!
+  email: String!
+}
+
+input NewProductInput {
+  name: String!
+  price: Float!
+}
+
+input NewOrderInput {
+  customerId: ID!
+}
+
+input NewOrderItemInput {
+  orderId: ID!
+  productId: ID!
+  quantity: Int!
+  price: Float!
 }
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
+  # Create a new customer
+  createCustomer(input: NewCustomerInput!): Customer!
+
+  # Create a new product
+  createProduct(input: NewProductInput!): Product!
+
+  # Create a new order
+  createOrder(input: NewOrderInput!): Order!
+
+  # Create a new order item
+  createOrderItem(input: NewOrderItemInput!): OrderItem!
 }
