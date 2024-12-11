@@ -1,0 +1,44 @@
+services:
+  gqlgen-eccomerce-project:
+    image: yaninyzwitty/gqlgen-eccomerce-project:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - USERNAME
+    env_file:
+      - ./dev.env
+    networks:
+      - private_network
+  postgres:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=myUser
+      - POSTGRES_DB=myDB
+      - POSTGRES_PASSWORD_FILE=/run/secrets/pg_password
+    secrets:
+      - pg_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - private_network
+
+
+
+
+secrets:
+  pg_password:
+    file: ./pg_password.txt
+
+networks:
+  private_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "10.0.0.0/19"
+          gateway: "10.0.0.1"
+
+volumes:
+  postgres_data:
+    driver: local
