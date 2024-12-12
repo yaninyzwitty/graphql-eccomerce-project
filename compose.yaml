@@ -22,12 +22,18 @@ services:
       - pg_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    configs:
+      - source: my_config
+        target: ./config.yml
     networks:
       - private_network
+    
 
 
 
-
+configs:
+  my_config:
+    file: ./config.yaml
 secrets:
   pg_password:
     file: ./pg_password.txt

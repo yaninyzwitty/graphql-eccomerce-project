@@ -31,7 +31,7 @@ var (
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	file, err := os.Open("config.yaml") //refactor with docker
+	file, err := os.Open("config.yml") //refactor with docker
 	if err != nil {
 		slog.Error("failed to open config.yaml ")
 		os.Exit(1)
