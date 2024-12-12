@@ -5,15 +5,26 @@ package model
 type Mutation struct {
 }
 
-type NewTodo struct {
-	Text   string `json:"text"`
-	UserID string `json:"userId"`
+type NewCustomerInput struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+type NewOrderInput struct {
+	CustomerID string `json:"customerId"`
+}
+
+type NewOrderItemInput struct {
+	OrderID   string  `json:"orderId"`
+	ProductID string  `json:"productId"`
+	Quantity  int32   `json:"quantity"`
+	Price     float64 `json:"price"`
+}
+
+type NewProductInput struct {
+	Name  string  `json:"name"`
+	Price float64 `json:"price"`
 }
 
 type Query struct {
-}
-
-type User struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
 }

@@ -6,44 +6,80 @@ package graph
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
-	"math/big"
 
 	"github.com/yaninyzwitty/gqlgen-eccomerce-project/graph/model"
 )
 
-// CreateTodo is the resolver for the createTodo field.
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	randNumber, _ := rand.Int(rand.Reader, big.NewInt(100))
-	todo := &model.Todo{
-		Text: input.Text,
-		ID:   fmt.Sprintf("T%d", randNumber),
-		User: &model.User{ID: input.UserID, Name: "user " + input.UserID},
-	}
-	r.todos = append(r.todos, todo)
-	return todo, nil
+// CreateCustomer is the resolver for the createCustomer field.
+func (r *mutationResolver) CreateCustomer(ctx context.Context, input model.NewCustomerInput) (*model.Customer, error) {
+	panic(fmt.Errorf("not implemented: CreateCustomer - createCustomer"))
 }
 
-// Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	return r.todos, nil
+// CreateProduct is the resolver for the createProduct field.
+func (r *mutationResolver) CreateProduct(ctx context.Context, input model.NewProductInput) (*model.Product, error) {
+	panic(fmt.Errorf("not implemented: CreateProduct - createProduct"))
 }
 
-// User is the resolver for the user field.
-func (r *todoResolver) User(ctx context.Context, obj *model.Todo) (*model.User, error) {
-	return &model.User{ID: obj.UserID, Name: "user " + obj.UserID}, nil
+// CreateOrder is the resolver for the createOrder field.
+func (r *mutationResolver) CreateOrder(ctx context.Context, input model.NewOrderInput) (*model.Order, error) {
+	panic(fmt.Errorf("not implemented: CreateOrder - createOrder"))
+}
+
+// CreateOrderItem is the resolver for the createOrderItem field.
+func (r *mutationResolver) CreateOrderItem(ctx context.Context, input model.NewOrderItemInput) (*model.OrderItem, error) {
+	panic(fmt.Errorf("not implemented: CreateOrderItem - createOrderItem"))
+}
+
+// Customer is the resolver for the customer field.
+func (r *orderResolver) Customer(ctx context.Context, obj *model.Order) (*model.Customer, error) {
+	panic(fmt.Errorf("not implemented: Customer - customer"))
+}
+
+// Items is the resolver for the items field.
+func (r *orderResolver) Items(ctx context.Context, obj *model.Order) ([]*model.OrderItem, error) {
+	panic(fmt.Errorf("not implemented: Items - items"))
+}
+
+// Customers is the resolver for the customers field.
+func (r *queryResolver) Customers(ctx context.Context) ([]*model.Customer, error) {
+	panic(fmt.Errorf("not implemented: Customers - customers"))
+}
+
+// Customer is the resolver for the customer field.
+func (r *queryResolver) Customer(ctx context.Context, id string) (*model.Customer, error) {
+	panic(fmt.Errorf("not implemented: Customer - customer"))
+}
+
+// Products is the resolver for the products field.
+func (r *queryResolver) Products(ctx context.Context) ([]*model.Product, error) {
+	panic(fmt.Errorf("not implemented: Products - products"))
+}
+
+// Product is the resolver for the product field.
+func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product, error) {
+	panic(fmt.Errorf("not implemented: Product - product"))
+}
+
+// OrdersByCustomer is the resolver for the ordersByCustomer field.
+func (r *queryResolver) OrdersByCustomer(ctx context.Context, customerID string) ([]*model.Order, error) {
+	panic(fmt.Errorf("not implemented: OrdersByCustomer - ordersByCustomer"))
+}
+
+// OrderItemsByOrder is the resolver for the orderItemsByOrder field.
+func (r *queryResolver) OrderItemsByOrder(ctx context.Context, orderID string) ([]*model.OrderItem, error) {
+	panic(fmt.Errorf("not implemented: OrderItemsByOrder - orderItemsByOrder"))
 }
 
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
+// Order returns OrderResolver implementation.
+func (r *Resolver) Order() OrderResolver { return &orderResolver{r} }
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
-// Todo returns TodoResolver implementation.
-func (r *Resolver) Todo() TodoResolver { return &todoResolver{r} }
-
 type mutationResolver struct{ *Resolver }
+type orderResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-type todoResolver struct{ *Resolver }
