@@ -1,26 +1,74 @@
 package main
 
 import (
-	"log"
+	"context"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/lru"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/yaninyzwitty/gqlgen-eccomerce-project/graph"
+	"github.com/yaninyzwitty/gqlgen-eccomerce-project/internal/database"
+	"github.com/yaninyzwitty/gqlgen-eccomerce-project/pkg"
 )
 
-const defaultPort = "8080"
+var (
+	password string
+)
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	file, err := os.Open("config.yaml") //refactor with docker
+	if err != nil {
+		slog.Error("failed to open config.yaml ")
+		os.Exit(1)
 	}
+	var cfg pkg.Config
+	if err := cfg.LoadConfig(file); err != nil {
+		slog.Error("failed to load config.yaml")
+		os.Exit(1)
+	}
+
+	err = godotenv.Load("dev.env")
+	if err != nil {
+		slog.Error("failed to load dev.env")
+		os.Exit(1)
+	}
+
+	if s := os.Getenv("DB_PASSWORD"); s != "" {
+		password = s
+	}
+
+	databaseCfg := database.NewDbConfig(cfg.Database.User, password, cfg.Database.Host, cfg.Database.Port, cfg.Database.Database, cfg.Database.SSLMode)
+	pool, err := databaseCfg.MakeNewPgxPool(ctx, 30)
+	if err != nil {
+		slog.Error("failed to make new pgx pool", "error", err)
+		os.Exit(1)
+	}
+
+	defer pool.Close()
+	// ping db
+	err = databaseCfg.Ping(ctx)
+	if err != nil {
+		slog.Error("failed to ping db", "error", err)
+		os.Exit(1)
+	}
+
+	mux := chi.NewRouter()
+	mux.Use(middleware.Logger)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
 
@@ -35,9 +83,32 @@ func main() {
 		Cache: lru.New[string](100),
 	})
 
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	mux.Handle("/query", srv)
 
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler: mux,
+	}
+
+	stopCH := make(chan os.Signal, 1)
+	signal.Notify(stopCH, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		slog.Info("server is listening on :" + fmt.Sprintf("%d", cfg.Server.Port))
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("failed to start server")
+			os.Exit(1)
+		}
+
+	}()
+	<-stopCH
+	slog.Info("shuttting down the server...")
+	if err := server.Shutdown(ctx); err != nil {
+		slog.Error("failed to shutdown server")
+		os.Exit(1)
+	} else {
+		slog.Info("server stopped down gracefully")
+
+	}
+
 }
