@@ -40,7 +40,7 @@ func main() {
 		slog.Error("failed to load config.yaml")
 		os.Exit(1)
 	}
-
+	// NOT NEEDED WHEN YOU ARE USING COMPOSE
 	// err = godotenv.Load("dev.env")
 	// if err != nil {
 	// 	slog.Error("failed to load dev.env")
@@ -70,8 +70,11 @@ func main() {
 
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)
+	resolvers := &graph.Resolver{
+		Pool: pool,
+	}
 
-	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
+	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: resolvers}))
 
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})

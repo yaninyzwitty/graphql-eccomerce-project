@@ -153,7 +153,17 @@ models:
     model:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
-  Todo:
+  Customer:
     fields:
-      user:
+      order_items:
+        resolver: true
+  Product:
+    fields:
+      orders:
+        resolver: true
+  Order:
+    fields:
+      customer:
+        resolver: true
+      items:
         resolver: true
