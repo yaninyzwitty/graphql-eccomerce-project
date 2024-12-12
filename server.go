@@ -17,7 +17,6 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/joho/godotenv"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/yaninyzwitty/gqlgen-eccomerce-project/graph"
 	"github.com/yaninyzwitty/gqlgen-eccomerce-project/internal/database"
@@ -31,7 +30,7 @@ var (
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	file, err := os.Open("config.yaml") //refactor with docker
+	file, err := os.Open("config.yml") //refactor with docker
 	if err != nil {
 		slog.Error("failed to open config.yaml ")
 		os.Exit(1)
@@ -42,11 +41,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = godotenv.Load("dev.env")
-	if err != nil {
-		slog.Error("failed to load dev.env")
-		os.Exit(1)
-	}
+	// err = godotenv.Load("dev.env")
+	// if err != nil {
+	// 	slog.Error("failed to load dev.env")
+	// 	os.Exit(1)
+	// }
+
+	fmt.Println(os.Getenv("DB_PASSWORD"))
 
 	if s := os.Getenv("DB_PASSWORD"); s != "" {
 		password = s
