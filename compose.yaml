@@ -24,8 +24,8 @@ services:
     ports:
       - 5432:5432
     environment:
-      - POSTGRES_USER=myUser
-      - POSTGRES_DB=myDatabase
+      - POSTGRES_USER=ian
+      - POSTGRES_DB=witty
       - POSTGRES_PASSWORD_FILE=/run/secrets/pg_password
     secrets:
       - pg_password

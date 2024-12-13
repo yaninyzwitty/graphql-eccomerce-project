@@ -39,6 +39,6 @@ help:
 	@echo "  make create_migration   - Create a new migration file (provide name with 'name' variable)"
 	@echo "  make reset_migrations   - Reset all migrations"
 
-# goose -dir ./internal/database/migrations postgres "postgres://myUser:mysecret_password@localhost:5432/myDatabase" up
+# goose -dir ./internal/database/migrations postgres "postgres://ian:newpassword@localhost:5432/witty" up
 # goose -dir ./internal/database/migrations create add-some-table sq
 

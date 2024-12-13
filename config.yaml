@@ -1,9 +1,9 @@
 server:
   port: 8080
 database:
-  user: myUser
-  host: localhost
-  database: myDatabase
-  port: 5432
-  sslmode: verify-full
+  user: ian
+  host: postgres # Change localhost to the PostgreSQL service name
+  database: witty
+  port: 5432 # Ensure you're using PostgreSQL's default port
+  sslmode: disable # Disable SSL mode for local development (adjust if using SSL)
   max_retries: 30

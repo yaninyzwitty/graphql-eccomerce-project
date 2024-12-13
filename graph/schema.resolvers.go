@@ -14,7 +14,7 @@ import (
 // CreateCustomer is the resolver for the createCustomer field.
 func (r *mutationResolver) CreateCustomer(ctx context.Context, input model.NewCustomerInput) (*model.Customer, error) {
 
-	var customer model.Customer
+	var customer model.DbCustomer
 	query := `INSERT INTO customers (name, email) VALUES($1, $2) RETURNING id, name, email, created_at`
 	err := r.Pool.QueryRow(ctx, query, input.Name, input.Email).Scan(&customer.ID, &customer.Name, &customer.Email, &customer.CreatedAt)
 	if err != nil {
@@ -24,7 +24,7 @@ func (r *mutationResolver) CreateCustomer(ctx context.Context, input model.NewCu
 		ID:        customer.ID,
 		Name:      customer.Name,
 		Email:     customer.Email,
-		CreatedAt: customer.CreatedAt,
+		CreatedAt: customer.CreatedAt.String(),
 		Orders:    []*model.Order{},
 	}, nil
 }
