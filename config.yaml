@@ -1,0 +1,9 @@
+server:
+  port: 8080
+database:
+  user: myUser
+  host: localhost
+  database: myDatabase
+  port: 26257
+  sslmode: verify-full
+  max_retries: 30

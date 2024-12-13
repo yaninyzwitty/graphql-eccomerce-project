@@ -1,0 +1,64 @@
+version: 2.1
+
+# Orbs for Go and Docker functionality
+orbs:
+  go: circleci/go@2.2.1
+
+# Define reusable executors
+executors:
+  go-executor:
+    docker:
+      - image: circleci/golang:1.22
+  machine-executor:
+    machine:
+      image: ubuntu-2204:2023.09.1
+
+# Jobs definition
+jobs:
+  # Build and test Go application
+  build_and_test:
+    executor: go-executor
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
+      - go/save-cache
+      - go/test:
+          covermode: atomic
+          failfast: true
+          race: true
+      - persist_to_workspace:
+          root: ~/project
+          paths: .
+
+  # Build and push Docker image (uses machine executor)
+  build-and-push:
+    executor: machine-executor
+    steps:
+      - checkout
+      - run:
+          name: Install Docker
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y docker.io
+      - run:
+          name: Build Docker Image
+          command: |
+            docker build -t yaninyzwitty/gqlgen-eccomerce-project:latest .
+      - run:
+          name: Login to Docker Hub
+          command: |
+            echo $DOCKERHUB_PASSWORD | docker login -u $DOCKERHUB_USERNAME --password-stdin
+      - run:
+          name: Push Docker Image
+          command: |
+            docker push yaninyzwitty/gqlgen-eccomerce-project:latest
+
+# Workflow definition
+workflows:
+  commit:
+    jobs:
+      - build_and_test
+      - build-and-push:
+          requires:
+            - build_and_test
