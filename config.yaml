@@ -4,6 +4,6 @@ database:
   user: myUser
   host: localhost
   database: myDatabase
-  port: 26257
+  port: 5432
   sslmode: verify-full
   max_retries: 30
