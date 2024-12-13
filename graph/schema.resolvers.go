@@ -13,7 +13,20 @@ import (
 
 // CreateCustomer is the resolver for the createCustomer field.
 func (r *mutationResolver) CreateCustomer(ctx context.Context, input model.NewCustomerInput) (*model.Customer, error) {
-	panic(fmt.Errorf("not implemented: CreateCustomer - createCustomer"))
+
+	var customer model.Customer
+	query := `INSERT INTO customers (name, email) VALUES($1, $2) RETURNING id, name, email, created_at`
+	err := r.Pool.QueryRow(ctx, query, input.Name, input.Email).Scan(&customer.ID, &customer.Name, &customer.Email, &customer.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create customer: %v", err)
+	}
+	return &model.Customer{
+		ID:        customer.ID,
+		Name:      customer.Name,
+		Email:     customer.Email,
+		CreatedAt: customer.CreatedAt,
+		Orders:    []*model.Order{},
+	}, nil
 }
 
 // CreateProduct is the resolver for the createProduct field.

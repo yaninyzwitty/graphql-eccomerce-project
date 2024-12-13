@@ -9,6 +9,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	maxRetries    = 5
+	retryInterval = 2 * time.Second
+)
+
 // DbMethods defines the interface for database operations.
 type DbMethods interface {
 	MakeNewPgxPool(ctx context.Context, maxRetries int) (*pgxpool.Pool, error)
@@ -79,13 +84,23 @@ func (db *DbConfig) MakeNewPgxPool(ctx context.Context, maxRetries int) (*pgxpoo
 // Ping verifies the database connection.
 func (db *DbConfig) Ping(ctx context.Context) error {
 	if db.pool == nil {
-		return fmt.Errorf("database connection pool is not initialized")
+		return fmt.Errorf("database pool is not initialized")
 	}
+	for i := 1; i <= maxRetries; i++ {
+		if err := db.pool.Ping(ctx); err != nil {
+			slog.Warn(fmt.Sprintf("Ping attempt %d/%d failed: %v", i, maxRetries, err))
+			if i == maxRetries {
+				return fmt.Errorf("failed to ping database after %d retries: %w", maxRetries, err)
 
-	if err := db.pool.Ping(ctx); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
+			}
+
+			// wait before retrying
+			time.Sleep(retryInterval)
+			continue
+		}
+		slog.Info("Pinged database succesfully")
+		return nil
 	}
+	return fmt.Errorf("unexpected error while pinging database")
 
-	slog.Info("Successfully pinged database")
-	return nil
 }

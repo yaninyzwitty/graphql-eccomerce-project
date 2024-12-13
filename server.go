@@ -30,11 +30,13 @@ var (
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	file, err := os.Open("config.yml") //refactor with docker
+	file, err := os.Open("my_config.yaml") //refactor with docker
 	if err != nil {
-		slog.Error("failed to open config.yaml ")
+		slog.Error("failed to open my_config.yaml ")
 		os.Exit(1)
 	}
+
+	defer file.Close()
 	var cfg pkg.Config
 	if err := cfg.LoadConfig(file); err != nil {
 		slog.Error("failed to load config.yaml")

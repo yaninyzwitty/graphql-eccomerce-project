@@ -1,6 +1,9 @@
 services:
   gqlgen-eccomerce-project:
-    image: yaninyzwitty/gqlgen-eccomerce-project:latest
+    # image: yaninyzwitty/gqlgen-eccomerce-project:latest
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -8,6 +11,12 @@ services:
       - DB_PASSWORD
     env_file:
       - ./dev.env
+    configs:
+      - source: my_config
+        target: ./my_config.yaml
+   
+
+   
     networks:
       - private_network
   postgres:
@@ -22,9 +31,6 @@ services:
       - pg_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    configs:
-      - source: my_config
-        target: ./config.yml
     networks:
       - private_network
     
@@ -33,7 +39,7 @@ services:
 
 configs:
   my_config:
-    file: ./config.yaml
+    file: config.yaml
 secrets:
   pg_password:
     file: ./pg_password.txt
@@ -49,3 +55,8 @@ networks:
 volumes:
   postgres_data:
     driver: local
+
+
+  #    configs:
+  # - source: my_config
+  #   target: ./my_config.yaml
