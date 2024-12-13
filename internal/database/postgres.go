@@ -45,8 +45,9 @@ func NewDbConfig(user, password, host string, port int, database, sslMode string
 
 // MakeNewPgxPool creates a new pgxpool.Pool instance with retry logic.
 func (db *DbConfig) MakeNewPgxPool(ctx context.Context, maxRetries int) (*pgxpool.Pool, error) {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		db.User, db.Password, db.Host, db.Port, db.Database, db.SSLMode)
+	// dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+	// 	db.User, db.Password, db.Host, db.Port, db.Database, db.SSLMode)
+	dsn := "postgres://ian:newpassword@postgres:5432/witty"
 
 	var lastErr error
 	for retriesLeft := maxRetries; retriesLeft > 0; retriesLeft-- {
