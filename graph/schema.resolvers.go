@@ -7,7 +7,10 @@ package graph
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/yaninyzwitty/gqlgen-eccomerce-project/graph/model"
 )
 
@@ -31,57 +34,355 @@ func (r *mutationResolver) CreateCustomer(ctx context.Context, input model.NewCu
 
 // CreateProduct is the resolver for the createProduct field.
 func (r *mutationResolver) CreateProduct(ctx context.Context, input model.NewProductInput) (*model.Product, error) {
-	panic(fmt.Errorf("not implemented: CreateProduct - createProduct"))
+	query := `INSERT INTO products (name, price) VALUES($1, $2) RETURNING id, name, price, created_at`
+	var product model.DBProduct
+	err := r.Pool.QueryRow(ctx, query, input.Name, input.Price).Scan(&product.ID, &product.Name, &product.Price, &product.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create product: %v", err)
+	}
+
+	return &model.Product{
+		ID:         product.ID,
+		Name:       product.Name,
+		Price:      product.Price,
+		CreatedAt:  product.CreatedAt.String(),
+		OrderItems: []*model.OrderItem{},
+	}, nil
 }
 
 // CreateOrder is the resolver for the createOrder field.
 func (r *mutationResolver) CreateOrder(ctx context.Context, input model.NewOrderInput) (*model.Order, error) {
-	panic(fmt.Errorf("not implemented: CreateOrder - createOrder"))
+	query := `
+		INSERT INTO orders (customer_id)
+		VALUES ($1)
+		RETURNING id, created_at
+	`
+
+	var orderId uuid.UUID
+	var createdAt time.Time
+
+	err := r.Pool.QueryRow(ctx, query, input.CustomerID).Scan(&orderId, &createdAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create order: %v", err)
+	}
+	return &model.Order{
+		ID: orderId.String(),
+		Customer: &model.Customer{
+			ID: input.CustomerID,
+		},
+		CreatedAt: createdAt.String(),
+		Items:     nil,
+	}, nil
 }
 
 // CreateOrderItem is the resolver for the createOrderItem field.
 func (r *mutationResolver) CreateOrderItem(ctx context.Context, input model.NewOrderItemInput) (*model.OrderItem, error) {
-	panic(fmt.Errorf("not implemented: CreateOrderItem - createOrderItem"))
+	orderUUID, err := uuid.Parse(input.OrderID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid order ID: %v", err)
+	}
+	productUUID, err := uuid.Parse(input.ProductID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid product ID: %v", err)
+	}
+
+	if input.Quantity < 0 {
+		return nil, fmt.Errorf("quantity must be greater than zero")
+
+	}
+	// insert query
+
+	query := `
+		INSERT INTO order_items (order_id, product_id, quantity, price)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, created_at
+	`
+
+	// Variables to store the returned data
+	var orderItemID uuid.UUID
+	var createdAt time.Time
+
+	err = r.Pool.QueryRow(ctx, query, orderUUID, productUUID, input.Quantity, input.Price).Scan(&orderItemID, &createdAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create order item: %v", err)
+	}
+	return &model.OrderItem{
+		ID: orderItemID.String(),
+		Order: &model.Order{
+			ID: input.OrderID,
+		},
+		Product: &model.Product{
+			ID: input.ProductID,
+		},
+		Quantity:  input.Quantity,
+		Price:     input.Price,
+		CreatedAt: createdAt.String(),
+	}, nil
+
 }
 
 // Customer is the resolver for the customer field.
 func (r *orderResolver) Customer(ctx context.Context, obj *model.Order) (*model.Customer, error) {
-	panic(fmt.Errorf("not implemented: Customer - customer"))
+	// Validate customer ID from the order object
+	customerUUID, err := uuid.Parse(obj.Customer.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid customer ID: %v", err)
+	}
+	// fetch customer details
+	query := `
+	SELECT id, name, email, created_at
+	FROM customers
+	WHERE id = $1
+`
+	var customer model.DbCustomer
+	var customerID uuid.UUID
+	err = r.Pool.QueryRow(ctx, query, customerUUID).Scan(&customerID, &customer.Name, &customer.Email, &customer.CreatedAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("customer not found")
+		}
+		return nil, fmt.Errorf("failed to fetch customer: %v", err)
+	}
+
+	return &model.Customer{
+		ID:        customerID.String(),
+		Name:      customer.Name,
+		Email:     customer.Email,
+		CreatedAt: customer.CreatedAt.String(),
+		Orders:    nil,
+	}, nil
+
 }
 
 // Items is the resolver for the items field.
 func (r *orderResolver) Items(ctx context.Context, obj *model.Order) ([]*model.OrderItem, error) {
-	panic(fmt.Errorf("not implemented: Items - items"))
+	// validate the order ID
+	orderUUID, err := uuid.Parse(obj.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid order ID: %v", err)
+	}
+	// fetch items from db
+	query := `SELECT id, order_id, product_id, quantity, price, created_at FROM order_items WHERE order_id = $1`
+	rows, err := r.Pool.Query(ctx, query, orderUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch order items: %v", err)
+	}
+	defer rows.Close()
+	// parse rows as order items
+	var items []*model.OrderItem
+	for rows.Next() {
+		var item model.OrderItem
+		var productID, orderItemID, orderID uuid.UUID
+		var createdAt time.Time
+		if err := rows.Scan(&orderItemID, &orderID, &productID, &item.Quantity, &item.Price, &createdAt); err != nil {
+			return nil, fmt.Errorf("failed to scan order item: %v", err)
+
+		}
+		item.CreatedAt = createdAt.String()
+		item.ID = orderItemID.String()
+		item.Product.ID = productID.String()
+		item.Order.ID = orderID.String()
+		item.Order = nil
+		item.Product = nil
+		items = append(items, &item)
+
+	}
+	// Check for any errors during iteration
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during rows iteration: %v", err)
+	}
+	return items, nil
+
 }
 
 // Customers is the resolver for the customers field.
+
 func (r *queryResolver) Customers(ctx context.Context) ([]*model.Customer, error) {
-	panic(fmt.Errorf("not implemented: Customers - customers"))
+	query := `
+		SELECT id, name, email, created_at
+		FROM customers
+	`
+	// Execute the query using your DB connection pool
+	rows, err := r.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch customers: %v", err)
+	}
+
+	defer rows.Close()
+	var customers []*model.Customer
+	for rows.Next() {
+		var customerID uuid.UUID
+		var createdAt time.Time
+		var customer model.Customer
+		if err := rows.Scan(&customerID, &customer.Name, &customer.Email, &createdAt); err != nil {
+			return nil, fmt.Errorf("failed to scan customer: %v", err)
+
+		}
+
+		customer.ID = customerID.String()
+		customer.CreatedAt = createdAt.String()
+		// append customers to result slice
+		customers = append(customers, &customer)
+	}
+
+	return customers, nil
+
 }
 
 // Customer is the resolver for the customer field.
 func (r *queryResolver) Customer(ctx context.Context, id string) (*model.Customer, error) {
-	panic(fmt.Errorf("not implemented: Customer - customer"))
+	customerUUID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid customer ID: %v", err)
+	}
+	query := `
+		SELECT id, name, email, created_at
+		FROM customers
+		WHERE id = $1
+	`
+
+	var customer model.Customer
+	var createdAt time.Time
+	var customerID uuid.UUID
+	err = r.Pool.QueryRow(ctx, query, customerUUID).Scan(&customerID, &customer.Name, &customer.Email, &createdAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("customer not found")
+		}
+		return nil, fmt.Errorf("failed to fetch customer: %v", err)
+	}
+
+	customer.CreatedAt = createdAt.String()
+	customer.ID = customerID.String()
+	return &customer, nil
 }
 
 // Products is the resolver for the products field.
 func (r *queryResolver) Products(ctx context.Context) ([]*model.Product, error) {
-	panic(fmt.Errorf("not implemented: Products - products"))
+	// fetch products from db
+	query := `
+		SELECT id, name, price, created_at
+		FROM products
+	`
+	rows, err := r.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch products: %v", err)
+	}
+	defer rows.Close()
+	var products []*model.Product
+	for rows.Next() {
+		var product model.Product
+		var productID uuid.UUID
+		var createdAt time.Time
+		if err := rows.Scan(&productID, &product.Name, &product.Price, &createdAt); err != nil {
+			return nil, fmt.Errorf("failed to scan product: %v", err)
+
+		}
+		product.CreatedAt = createdAt.String()
+		product.ID = productID.String()
+		products = append(products, &product)
+	}
+	return products, nil
 }
 
 // Product is the resolver for the product field.
 func (r *queryResolver) Product(ctx context.Context, id string) (*model.Product, error) {
-	panic(fmt.Errorf("not implemented: Product - product"))
+	productUUID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid product ID: %v", err)
+
+	}
+	query := `
+		SELECT id, name, price, created_at
+		FROM products
+		WHERE id = $1
+	`
+	var product model.Product
+	var createdAt time.Time
+	err = r.Pool.QueryRow(ctx, query, productUUID).Scan(&productUUID, &product.Name, &product.Price, &createdAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("product not found")
+		}
+		return nil, fmt.Errorf("failed to fetch product: %v", err)
+	}
+	product.CreatedAt = createdAt.String()
+	product.ID = productUUID.String()
+	return &product, nil
 }
 
 // OrdersByCustomer is the resolver for the ordersByCustomer field.
 func (r *queryResolver) OrdersByCustomer(ctx context.Context, customerID string) ([]*model.Order, error) {
-	panic(fmt.Errorf("not implemented: OrdersByCustomer - ordersByCustomer"))
+	customerUUID, err := uuid.Parse(customerID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid customer ID: %v", err)
+	}
+	query := `
+		SELECT id, customer_id, created_at
+		FROM orders
+		WHERE customer_id = $1
+	`
+	rows, err := r.Pool.Query(ctx, query, customerUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch orders: %v", err)
+	}
+	defer rows.Close()
+	var orders []*model.Order
+	for rows.Next() {
+		var order model.Order
+		var orderID, customerID uuid.UUID
+		var createdAt time.Time
+		if err := rows.Scan(&orderID, &customerID, &createdAt); err != nil {
+			return nil, fmt.Errorf("failed to scan order: %v", err)
+
+		}
+
+		order.ID = orderID.String()
+		order.CreatedAt = createdAt.String()
+		order.Customer.ID = customerID.String()
+		order.Items = nil
+
+		orders = append(orders, &order)
+	}
+	return orders, nil
+
 }
 
 // OrderItemsByOrder is the resolver for the orderItemsByOrder field.
 func (r *queryResolver) OrderItemsByOrder(ctx context.Context, orderID string) ([]*model.OrderItem, error) {
-	panic(fmt.Errorf("not implemented: OrderItemsByOrder - orderItemsByOrder"))
+	orderUUID, err := uuid.Parse(orderID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid order ID: %v", err)
+	}
+	query := `
+		SELECT id, order_id, product_id, quantity, price, created_at
+		FROM order_items
+		WHERE order_id = $1
+	`
+
+	rows, err := r.Pool.Query(ctx, query, orderUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch order items: %v", err)
+	}
+	var orderItems []*model.OrderItem
+	defer rows.Close()
+	for rows.Next() {
+		var orderItem model.OrderItem
+		var orderItemID, orderID, productID uuid.UUID
+		var createdAt time.Time
+		if err := rows.Scan(&orderItemID, &orderID, &productID, &orderItem.Quantity, &orderItem.Price, &createdAt); err != nil {
+			return nil, fmt.Errorf("failed to scan order item: %v", err)
+
+		}
+		orderItem.ID = orderItemID.String()
+		orderItem.Order.ID = orderID.String()
+		orderItem.Product.ID = productID.String()
+		orderItem.CreatedAt = createdAt.String()
+
+		orderItems = append(orderItems, &orderItem)
+
+	}
+	return orderItems, nil
 }
 
 // Mutation returns MutationResolver implementation.

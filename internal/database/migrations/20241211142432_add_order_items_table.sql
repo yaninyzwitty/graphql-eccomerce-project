@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS order_items (
     created_at TIMESTAMPTZ DEFAULT now()         -- Timestamp of order item creation
 );
 
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id); --secondary index improve performance
+
 -- +goose StatementEnd
 
 -- +goose Down
