@@ -2,7 +2,7 @@ version: 2.1
 
 # Orbs for Go and Docker functionality
 orbs:
-  go: circleci/go@2.2.1
+  go: circleci/go@2.2.2
 
 # Define reusable executors
 executors:
