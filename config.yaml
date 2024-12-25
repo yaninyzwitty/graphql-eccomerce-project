@@ -7,3 +7,9 @@ database:
   port: 5432 # Database port
   sslmode: disable # SSL mode (disabled for local dev)
   max_retries: 30 # Max retries for DB connectio
+
+
+
+  121e1a4f-f8dc-4934-ba9f-4d36e4205bf9
+  1759fa5e-c610-45dd-b225-46384e70ca24
+  18311cea-40d3-4d43-af7e-ca97a6790639

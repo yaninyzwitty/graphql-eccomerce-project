@@ -1,6 +1,6 @@
 services:
   gqlgen-eccomerce-project:
-    # image: yaninyzwitty/gqlgen-eccomerce-project:latest
+    image: yaninyzwitty/gqlgen-eccomerce-project:latest
     build: 
       context: .
       dockerfile: Dockerfile
